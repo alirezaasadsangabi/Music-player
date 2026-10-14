@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#10282F">
+<meta name="mobile-web-app-capable" content="yes">
+<title>پخش‌کننده موزیک</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#10282F; --panel:#17383F; --panel2:#21505A; --line:#2B6270;
+  --ink:#EDF2E8; --mute:#8FB0AE; --gold:#F2B632; --red:#E8694D;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+  font-family:"Vazirmatn","Samim","IRANSans",Tahoma,system-ui,sans-serif;overscroll-behavior:none}
+body{display:flex;justify-content:center}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.app{width:100%;max-width:520px;height:100dvh;display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.f{fill:currentColor;stroke:none}
+
+/* header */
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 6px}
+header h1{margin:0;font-size:19px;font-weight:700}
+.tools{display:flex;gap:6px}
+.tbtn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--panel)}
+.tbtn:active{background:var(--panel2)}
+
+/* now playing */
+.now{display:flex;flex-direction:column;align-items:center;padding:6px 22px 10px}
+.disc{width:150px;height:150px;border-radius:50%;position:relative;
+  background:
+   radial-gradient(circle at 50% 50%,transparent 0 24%,rgba(255,255,255,.0) 24%),
+   repeating-radial-gradient(circle at 50% 50%,#0b1c21 0 2px,#13313a 2px 4px);
+  box-shadow:0 0 0 3px var(--line),0 14px 30px rgba(0,0,0,.45)}
+.disc::before{content:"";position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 20deg,rgba(255,255,255,.14),transparent 20%,transparent 50%,rgba(255,255,255,.1) 70%,transparent 90%)}
+.disc::after{content:"";position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px;border-radius:50%;
+  background:var(--gold);box-shadow:inset 0 0 0 10px #d99d1d,0 0 0 4px #0b1c21}
+.disc.spin{animation:spin 6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.disc.spin{animation:none}}
+.title{margin:14px 0 2px;font-size:17px;font-weight:700;text-align:center;max-width:100%;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{font-size:13px;color:var(--mute);min-height:20px}
+
+.seekwrap{width:100%;margin-top:8px}
+.seek{direction:ltr;height:36px;display:flex;align-items:center;touch-action:none;cursor:pointer;user-select:none}
+.track{position:relative;width:100%;height:8px;border-radius:8px;background:var(--panel2)}
+.fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:8px;background:var(--gold)}
+.thumb{position:absolute;top:50%;left:0;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 4px rgba(242,182,50,.35)}
+.times{direction:ltr;display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin-top:-2px}
+
+.ctrl{direction:ltr;display:flex;align-items:center;justify-content:center;gap:16px;margin-top:8px}
+.cbtn{width:56px;height:56px;border-radius:50%;display:grid;place-items:center}
+.cbtn:active{background:var(--panel)}
+.cbtn.main{width:72px;height:72px;background:var(--gold);color:#1b1500}
+.cbtn.main:active{background:#ffd062}
+.cbtn.main .i{width:30px;height:30px}
+.cbtn.shuf{color:var(--mute)}
+.cbtn.shuf.on{color:var(--gold);background:var(--panel)}
+
+/* list */
+.listhead{display:flex;justify-content:space-between;padding:8px 20px 6px;color:var(--mute);font-size:13px;border-top:1px solid var(--panel2)}
+.list{flex:1;overflow-y:auto;padding:0 12px 14px;-webkit-overflow-scrolling:touch}
+.row{display:flex;align-items:center;gap:4px;border-radius:14px}
+.row.cur{background:var(--panel)}
+.row .pick{flex:1;min-width:0;text-align:right;padding:11px 10px;display:block}
+.row .nm{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .mt{display:block;font-size:12px;color:var(--mute);margin-top:2px}
+.row.cur .nm{color:var(--gold);font-weight:700}
+.dis{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--mute);flex:none}
+.dis:active{color:var(--red);background:var(--panel2)}
+.empty{text-align:center;color:var(--mute);padding:34px 24px;line-height:1.9;font-size:14px}
+
+/* sheets */
+.back{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s;z-index:10}
+.back.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:0;width:100%;max-width:520px;transform:translate(-50%,105%);transition:transform .25s ease;
+  background:var(--panel);border-radius:22px 22px 0 0;z-index:11;padding:8px 20px calc(18px + env(safe-area-inset-bottom));max-height:88dvh;overflow-y:auto}
+.sheet.on{transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){.sheet,.back{transition:none}}
+.grip{width:42px;height:4px;border-radius:4px;background:var(--line);margin:4px auto 12px}
+.sheet h2{margin:0 0 12px;font-size:17px}
+.sheet p{margin:0 0 14px;color:var(--mute);font-size:14px;line-height:1.8}
+
+.eqrow{display:grid;grid-template-columns:76px 1fr 46px;align-items:center;gap:8px;margin:10px 0;font-size:14px}
+.eqrow input[type=range]{direction:ltr;width:100%;height:34px;accent-color:var(--gold)}
+.eqrow .v{direction:ltr;text-align:left;color:var(--mute);font-size:13px}
+.adv{margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.chip{padding:9px 14px;border-radius:20px;background:var(--panel2);font-size:14px}
+.chip:active{background:var(--line)}
+.sw{display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 0;font-size:15px;margin-top:4px}
+.sw .knob{width:46px;height:26px;border-radius:26px;background:var(--panel2);position:relative;transition:background .2s}
+.sw .knob::after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:var(--ink);transition:transform .2s}
+.sw[aria-checked=true] .knob{background:var(--gold)}
+.sw[aria-checked=true] .knob::after{transform:translateX(-20px)}
+.note{color:var(--gold);font-size:13px;margin:6px 0 0}
+
+.fld{width:100%;direction:ltr;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--ink);padding:14px;font-size:15px;margin-bottom:12px}
+.btn{display:block;width:100%;padding:15px;border-radius:14px;background:var(--gold);color:#1b1500;font-weight:700;font-size:15px;margin-top:8px}
+.btn.sec{background:var(--panel2);color:var(--ink);font-weight:500}
+.btn.danger{background:var(--red);color:#fff}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,30px);opacity:0;
+  background:var(--ink);color:#10282F;padding:12px 18px;border-radius:14px;font-size:14px;z-index:20;max-width:88%;text-align:center;
+  transition:opacity .2s,transform .2s;pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-play" viewBox="0 0 24 24"><path class="f" d="M8 5v14l11-7z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path class="f" d="M6 5h4v14H6zM14 5h4v14h-4z"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path class="f" d="M6 5l9 7-9 7zM17 5h2v14h-2z"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24"><path class="f" d="M18 5l-9 7 9 7zM5 5h2v14H5z"/></symbol>
+  <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  <symbol id="i-eq" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M17 14V2M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></symbol>
+</svg>
+
+<div class="app">
+  <header>
+    <h1>پخش‌کننده موزیک</h1>
+    <div class="tools">
+      <button class="tbtn" id="btnAdd" aria-label="افزودن چند آهنگ"><svg class="i"><use href="#i-plus"/></svg></button>
+      <button class="tbtn" id="btnLink" aria-label="پخش لینک آنلاین"><svg class="i"><use href="#i-link"/></svg></button>
+      <button class="tbtn" id="btnEq" aria-label="اکولایزر"><svg class="i"><use href="#i-eq"/></svg></button>
+    </div>
+  </header>
+
+  <section class="now">
+    <div class="disc" id="disc"></div>
+    <div class="title" id="title">آهنگی انتخاب نشده</div>
+    <div class="sub" id="sub"></div>
+
+    <div class="seekwrap">
+      <div class="seek" id="seek" aria-label="نوار پخش">
+        <div class="track"><div class="fill" id="fill"></div><div class="thumb" id="thumb"></div></div>
+      </div>
+      <div class="times"><span id="tcur">۰:۰۰</span><span id="tdur">--:--</span></div>
+    </div>
+
+    <div class="ctrl">
+      <button class="cbtn shuf" id="btnShuf" aria-label="پخش تصادفی" aria-pressed="false"><svg class="i"><use href="#i-shuffle"/></svg></button>
+      <button class="cbtn" id="btnPrev" aria-label="قبلی"><svg class="i"><use href="#i-prev"/></svg></button>
+      <button class="cbtn main" id="btnPlay" aria-label="پخش"><svg class="i" id="playIcon"><use href="#i-play"/></svg></button>
+      <button class="cbtn" id="btnNext" aria-label="بعدی"><svg class="i"><use href="#i-next"/></svg></button>
+      <span style="width:56px"></span>
+    </div>
+  </section>
+
+  <div class="listhead"><span>لیست پخش</span><span id="count"></span></div>
+  <div class="list" id="list"></div>
+</div>
+
+<audio id="a" crossorigin="anonymous" preload="auto"></audio>
+<audio id="b" preload="auto"></audio>
+<input type="file" id="fileIn" accept="audio/*" multiple hidden>
+
+<div class="back" id="back"></div>
+
+<!-- equalizer -->
+<div class="sheet" id="shEq" role="dialog" aria-label="اکولایزر">
+  <div class="grip"></div>
+  <h2>اکولایزر</h2>
+  <div class="eqrow"><span>بیس</span><input type="range" id="eqBass" min="-12" max="12" step="1" value="0"><span class="v" id="vBass">0 dB</span></div>
+  <div class="eqrow"><span>تریبل</span><input type="range" id="eqTreble" min="-12" max="12" step="1" value="0"><span class="v" id="vTreble">0 dB</span></div>
+  <button class="sw" id="swAdv" role="switch" aria-checked="false"><span>تنظیمات پیشرفته</span><span class="knob"></span></button>
+  <div class="adv" id="adv" hidden>
+    <div class="chips" id="chips"></div>
+    <div class="eqrow"><span>بلندی کل</span><input type="range" id="eqPre" min="-12" max="6" step="1" value="0"><span class="v" id="vPre">0 dB</span></div>
+    <div id="bands"></div>
+  </div>
+  <p class="note" id="eqNote" hidden>اکولایزر روی این لینک اعمال نمی‌شود، چون سرور اجازه پردازش صدا را نمی‌دهد.</p>
+  <button class="btn sec" id="eqReset">بازنشانی</button>
+  <button class="btn" data-close>تأیید</button>
+</div>
+
+<!-- link -->
+<div class="sheet" id="shLink" role="dialog" aria-label="لینک آنلاین">
+  <div class="grip"></div>
+  <h2>پخش لینک آنلاین</h2>
+  <p>لینک مستقیم فایل صوتی (مثل mp3) را وارد کنید.</p>
+  <input class="fld" id="urlIn" type="url" inputmode="url" placeholder="https://example.com/song.mp3" autocomplete="off">
+  <button class="btn" id="urlGo">افزودن و پخش</button>
+  <button class="btn sec" data-close>انصراف</button>
+</div>
+
+<!-- dislike confirm -->
+<div class="sheet" id="shDel" role="dialog" aria-label="حذف آهنگ">
+  <div class="grip"></div>
+  <h2 id="delTitle">حذف آهنگ</h2>
+  <p id="delText"></p>
+  <button class="btn danger" id="delPhone">حذف از لیست و حافظه گوشی</button>
+  <button class="btn sec" id="delList">فقط از لیست حذف شود</button>
+  <button class="btn sec" data-close>انصراف</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const fa=s=>String(s).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+const fmt=t=>{if(!isFinite(t)||t<0)return '--:--';const m=Math.floor(t/60),s=Math.floor(t%60);return fa(m+':'+String(s).padStart(2,'0'))};
+const stripExt=n=>n.replace(/\.[a-z0-9]{2,5}$/i,'');
+
+/* ---------- storage (IndexedDB) ---------- */
+const DB=(()=>{
+  let db;
+  const open=()=>new Promise((res,rej)=>{
+    const r=indexedDB.open('musicplayer',1);
+    r.onupgradeneeded=()=>r.result.createObjectStore('songs',{keyPath:'id',autoIncrement:true});
+    r.onsuccess=()=>{db=r.result;res()};
+    r.onerror=()=>rej(r.error);
+  });
+  const tx=(mode,fn)=>new Promise((res,rej)=>{
+    const t=db.transaction('songs',mode);
+    const rq=fn(t.objectStore('songs'));
+    t.oncomplete=()=>res(rq&&rq.result);
+    t.onerror=()=>rej(t.error);
+    t.onabort=()=>rej(t.error);
+  });
+  return{open,
+    all:()=>tx('readonly',s=>s.getAll()),
+    add:o=>tx('readwrite',s=>s.add(o)),
+    del:id=>tx('readwrite',s=>s.delete(id))};
+})();
+
+/* ---------- state ---------- */
+let songs=[],cur=-1,shuffleOn=localStorage.getItem('shuf')==='1';
+let history=[],queue=[],objUrl=null,fellBack=false,dragging=false,pendingDel=null;
+const A=$('#a'),B=$('#b');let au=A;
+
+/* ---------- toast / sheets ---------- */
+let tt;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),3200)}
+function openSheet(id){$('#back').classList.add('on');$(id).classList.add('on')}
+function closeSheets(){$('#back').classList.remove('on');document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('on'))}
+$('#back').addEventListener('click',closeSheets);
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeSheets));
+
+/* ---------- equalizer (Web Audio) ---------- */
+const BAND_F=[60,230,910,3600,14000];
+const BAND_L=['۶۰ هرتز','۲۳۰ هرتز','۹۱۰ هرتز','۳٫۶ کیلو','۱۴ کیلو'];
+const PRESETS={
+  'خنثی':{bass:0,treble:0,pre:0,bands:[0,0,0,0,0]},
+  'بیس قوی':{bass:6,treble:0,pre:-2,bands:[5,3,0,0,0]},
+  'صدای خواننده':{bass:-1,treble:1,pre:0,bands:[-2,0,3,3,1]},
+  'شفاف':{bass:-1,treble:5,pre:-1,bands:[-1,0,0,3,5]},
+  'راک':{bass:4,treble:3,pre:-2,bands:[4,2,-2,2,4]}
+};
+let eq=Object.assign({bass:0,treble:0,pre:0,bands:[0,0,0,0,0],adv:false},JSON.parse(localStorage.getItem('eq')||'{}'));
+let ctx=null,graph=null;
+function initAudio(){
+  if(graph)return;
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC)return;
+  ctx=new AC();
+  const src=ctx.createMediaElementSource(A);
+  const pre=ctx.createGain();
+  const bass=ctx.createBiquadFilter();bass.type='lowshelf';bass.frequency.value=200;
+  const bands=BAND_F.map(f=>{const n=ctx.createBiquadFilter();n.type='peaking';n.frequency.value=f;n.Q.value=1.1;return n});
+  const treble=ctx.createBiquadFilter();treble.type='highshelf';treble.frequency.value=4000;
+  let node=src;
+  [pre,bass,...bands,treble].forEach(n=>{node.connect(n);node=n});
+  node.connect(ctx.destination);
+  graph={pre,bass,bands,treble};
+  applyEQ();
+}
+function applyEQ(){
+  if(!graph)return;
+  graph.pre.gain.value=Math.pow(10,eq.pre/20);
+  graph.bass.gain.value=eq.bass;
+  graph.treble.gain.value=eq.treble;
+  graph.bands.forEach((n,i)=>n.gain.value=eq.bands[i]);
+}
+const db=v=>(v>0?'+':'')+fa(v)+' dB';
+function saveEQ(){localStorage.setItem('eq',JSON.stringify(eq))}
+function syncEQUI(){
+  $('#eqBass').value=eq.bass;$('#vBass').textContent=db(eq.bass);
+  $('#eqTreble').value=eq.treble;$('#vTreble').textContent=db(eq.treble);
+  $('#eqPre').value=eq.pre;$('#vPre').textContent=db(eq.pre);
+  document.querySelectorAll('#bands input').forEach((el,i)=>{el.value=eq.bands[i];el.closest('.eqrow').querySelector('.v').textContent=db(eq.bands[i])});
+  $('#swAdv').setAttribute('aria-checked',eq.adv);
+  $('#adv').hidden=!eq.adv;
+}
+function buildEQUI(){
+  const wrap=$('#bands');
+  BAND_L.forEach((l,i)=>{
+    const r=document.createElement('div');r.className='eqrow';
+    r.innerHTML='<span>'+l+'</span><input type="range" min="-12" max="12" step="1" value="0"><span class="v">0 dB</span>';
+    r.querySelector('input').addEventListener('input',e=>{eq.bands[i]=+e.target.value;r.querySelector('.v').textContent=db(eq.bands[i]);applyEQ();saveEQ()});
+    wrap.appendChild(r);
+  });
+  const chips=$('#chips');
+  Object.keys(PRESETS).forEach(k=>{
+    const b=document.createElement('button');b.className='chip';b.textContent=k;
+    b.addEventListener('click',()=>{const p=PRESETS[k];eq={...eq,bass:p.bass,treble:p.treble,pre:p.pre,bands:[...p.bands]};syncEQUI();applyEQ();saveEQ()});
+    chips.appendChild(b);
+  });
+  $('#eqBass').addEventListener('input',e=>{eq.bass=+e.target.value;$('#vBass').textContent=db(eq.bass);applyEQ();saveEQ()});
+  $('#eqTreble').addEventListener('input',e=>{eq.treble=+e.target.value;$('#vTreble').textContent=db(eq.treble);applyEQ();saveEQ()});
+  $('#eqPre').addEventListener('input',e=>{eq.pre=+e.target.value;$('#vPre').textContent=db(eq.pre);applyEQ();saveEQ()});
+  $('#swAdv').addEventListener('click',()=>{eq.adv=!eq.adv;syncEQUI();saveEQ()});
+  $('#eqReset').addEventListener('click',()=>{const p=PRESETS['خنثی'];eq={...eq,bass:0,treble:0,pre:0,bands:[...p.bands]};syncEQUI();applyEQ();saveEQ()});
+  syncEQUI();
+}
+$('#btnEq').addEventListener('click',()=>{initAudio();syncEQUI();$('#eqNote').hidden=au!==B;openSheet('#shEq')});
+
+/* ---------- list rendering ---------- */
+function render(){
+  const l=$('#list');l.innerHTML='';
+  $('#count').textContent=songs.length?fa(songs.length)+' آهنگ':'';
+  if(!songs.length){
+    l.innerHTML='<div class="empty">هنوز آهنگی در لیست نیست.<br>با دکمه + می‌توانید چند آهنگ را یکجا از گوشی انتخاب کنید، یا با دکمه لینک یک آدرس آنلاین پخش کنید.</div>';
+    return;
+  }
+  songs.forEach((s,i)=>{
+    const r=document.createElement('div');r.className='row'+(i===cur?' cur':'');
+    const p=document.createElement('button');p.className='pick';
+    p.innerHTML='<span class="nm"></span><span class="mt"></span>';
+    p.querySelector('.nm').textContent=s.name;
+    p.querySelector('.mt').textContent=s.type==='url'?'لینک آنلاین':(s.size?fa((s.size/1048576).toFixed(1))+' مگابایت':'فایل');
+    p.addEventListener('click',e=>{if(!e.isTrusted)return;queue=queue.filter(x=>x!==i);if(cur>=0&&cur!==i)history.push(cur);playIndex(i)});
+    const d=document.createElement('button');d.className='dis';d.setAttribute('aria-label','دوست ندارم');
+    d.innerHTML='<svg class="i"><use href="#i-down"/></svg>';
+    d.addEventListener('click',e=>{if(!e.isTrusted)return;askDelete(s)});
+    r.append(p,d);l.appendChild(r);
+  });
+}
+
+/* ---------- playback ---------- */
+function useEl(el){if(au!==el){au.pause();au=el}}
+function resetQueues(){queue=[];history=[]}
+async function playIndex(i){
+  if(!songs.length||i<0||i>=songs.length)return;
+  initAudio();
+  cur=i;fellBack=false;
+  const s=songs[i];
+  A.pause();B.pause();
+  if(objUrl){URL.revokeObjectURL(objUrl);objUrl=null}
+  useEl(A);
+  if(s.type==='url'){A.src=s.url}
+  else{objUrl=URL.createObjectURL(s.blob);A.src=objUrl}
+  try{if(ctx&&ctx.state!=='running')await ctx.resume();await au.play()}catch(e){/* handled by error event */}
+  updateNow();render();
+  const row=document.querySelector('.row.cur');if(row)row.scrollIntoView({block:'nearest'});
+  if('mediaSession' in navigator&&window.MediaMetadata){navigator.mediaSession.metadata=new MediaMetadata({title:s.name,artist:'پخش‌کننده موزیک'})}
+}
+function nextIndex(){
+  const n=songs.length;if(!n)return -1;
+  if(shuffleOn){
+    if(!queue.length){queue=songs.map((_,i)=>i).filter(i=>n===1||i!==cur);shuffleArr(queue)}
+    return queue.pop();
+  }
+  return (cur+1)%n;
+}
+function shuffleArr(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}}
+function goNext(){
+  if(!songs.length)return;
+  if(cur<0&&!shuffleOn){playIndex(0);return}
+  const i=nextIndex();if(i<0)return;
+  if(cur>=0)history.push(cur);
+  playIndex(i);
+}
+function goPrev(){
+  if(!songs.length)return;
+  if(shuffleOn){
+    if(history.length)playIndex(history.pop());
+    else if(cur>=0)au.currentTime=0;
+  }else{
+    playIndex(((cur<0?0:cur)-1+songs.length)%songs.length);
+  }
+}
+function togglePlay(){
+  if(cur<0){if(songs.length)(shuffleOn?goNext():playIndex(0));return}
+  initAudio();
+  if(ctx&&ctx.state!=='running')ctx.resume();
+  if(au.paused)au.play().catch(()=>{});else au.pause();
+}
+function updateNow(){
+  const s=songs[cur];
+  $('#title').textContent=s?s.name:'آهنگی انتخاب نشده';
+  $('#sub').textContent=s?(s.type==='url'?'لینک آنلاین':''):'';
+  syncPlayState();
+}
+function syncPlayState(){
+  const playing=!au.paused&&!au.ended&&cur>=0;
+  $('#playIcon').innerHTML='<use href="#i-'+(playing?'pause':'play')+'"/>';
+  $('#btnPlay').setAttribute('aria-label',playing?'مکث':'پخش');
+  $('#disc').classList.toggle('spin',playing);
+}
+function setShuffleUI(){const b=$('#btnShuf');b.classList.toggle('on',shuffleOn);b.setAttribute('aria-pressed',shuffleOn)}
+
+/* audio events on both elements */
+[A,B].forEach(el=>{
+  el.addEventListener('timeupdate',()=>{if(el!==au||dragging)return;paintSeek(el.currentTime,el.duration)});
+  el.addEventListener('loadedmetadata',()=>{if(el===au)paintSeek(el.currentTime,el.duration)});
+  el.addEventListener('durationchange',()=>{if(el===au)paintSeek(el.currentTime,el.duration)});
+  el.addEventListener('play',()=>{if(el===au)syncPlayState()});
+  el.addEventListener('pause',()=>{if(el===au)syncPlayState()});
+  el.addEventListener('ended',()=>{if(el===au)goNext()});
+  el.addEventListener('error',()=>{
+    if(el!==au)return;
+    const s=songs[cur];if(!s)return;
+    if(el===A&&!A.getAttribute('src'))return;
+    if(el===A&&s.type==='url'&&!fellBack){
+      fellBack=true;A.removeAttribute('src');
+      useEl(B);B.src=s.url;B.play().catch(()=>{});
+      toast('پخش شد، ولی اکولایزر روی این لینک کار نمی‌کند');
+      return;
+    }
+    toast(s.type==='url'?'این لینک پخش نشد. لینک مستقیم فایل صوتی لازم است.':'این فایل پخش نشد.');
+    syncPlayState();
+  });
+});
+
+/* ---------- touch-only seek bar ---------- */
+const seek=$('#seek'),fill=$('#fill'),thumb=$('#thumb');
+function paintSeek(t,d){
+  const r=(isFinite(d)&&d>0)?Math.min(1,t/d):0;
+  fill.style.width=(r*100)+'%';thumb.style.left=(r*100)+'%';
+  $('#tcur').textContent=fmt(t);$('#tdur').textContent=isFinite(d)?fmt(d):'--:--';
+}
+function ratioFrom(e){const b=seek.getBoundingClientRect();return Math.max(0,Math.min(1,(e.clientX-b.left)/b.width))}
+seek.addEventListener('pointerdown',e=>{
+  if(!e.isTrusted||cur<0)return;
+  dragging=true;seek.setPointerCapture(e.pointerId);
+  const d=au.duration;if(isFinite(d))paintSeek(ratioFrom(e)*d,d);
+});
+seek.addEventListener('pointermove',e=>{
+  if(!dragging)return;const d=au.duration;if(isFinite(d))paintSeek(ratioFrom(e)*d,d);
+});
+function endDrag(e){
+  if(!dragging)return;dragging=false;
+  const d=au.duration;if(isFinite(d)&&e.type!=='pointercancel'){au.currentTime=ratioFrom(e)*d}
+}
+seek.addEventListener('pointerup',endDrag);
+seek.addEventListener('pointercancel',endDrag);
+
+/* ---------- buttons (trusted taps only) ---------- */
+const tap=(el,fn)=>el.addEventListener('click',e=>{if(e.isTrusted)fn(e)});
+tap($('#btnPlay'),togglePlay);
+tap($('#btnNext'),goNext);
+tap($('#btnPrev'),goPrev);
+tap($('#btnShuf'),()=>{shuffleOn=!shuffleOn;localStorage.setItem('shuf',shuffleOn?'1':'0');queue=[];setShuffleUI();toast(shuffleOn?'پخش تصادفی روشن شد':'پخش تصادفی خاموش شد')});
+
+/* block every non-touch way to change track / seek */
+document.addEventListener('keydown',e=>{
+  const t=e.target;
+  if(t&&t.tagName==='INPUT')return;
+  e.preventDefault();
+},true);
+if('mediaSession' in navigator){
+  ['play','pause','stop','previoustrack','nexttrack','seekbackward','seekforward','seekto'].forEach(a=>{
+    try{navigator.mediaSession.setActionHandler(a,()=>{})}catch(_){}
+  });
+}
+
+/* ---------- adding songs ---------- */
+async function addEntries(entries){
+  const have=new Set(songs.filter(s=>s.type==='file').map(s=>s.name+'|'+s.size));
+  let added=0;
+  for(const {file,handle} of entries){
+    if(!file)continue;
+    const key=stripExt(file.name)+'|'+file.size;
+    if(have.has(key))continue;
+    const rec={type:'file',name:stripExt(file.name),size:file.size,blob:file};
+    if(handle)rec.handle=handle;
+    try{rec.id=await DB.add(rec);songs.push(rec);have.add(key);added++}catch(e){toast('حافظه مرورگر پر است')}
+  }
+  render();
+  if(added)toast(fa(added)+' آهنگ به لیست اضافه شد');
+  else if(entries.length)toast('این آهنگ‌ها قبلاً در لیست بودند');
+}
+async function pickFiles(){
+  if(window.showOpenFilePicker){
+    try{
+      const hs=await window.showOpenFilePicker({multiple:true,types:[{description:'آهنگ',accept:{'audio/*':['.mp3','.m4a','.aac','.ogg','.opus','.wav','.flac','.wma']}}]});
+      const entries=[];for(const h of hs)entries.push({file:await h.getFile(),handle:h});
+      await addEntries(entries);return;
+    }catch(e){if(e&&e.name==='AbortError')return}
+  }
+  $('#fileIn').click();
+}
+$('#fileIn').addEventListener('change',async e=>{
+  const fs=[...e.target.files].filter(f=>f.type.startsWith('audio/')||/\.(mp3|m4a|aac|ogg|opus|wav|flac|wma)$/i.test(f.name));
+  e.target.value='';
+  await addEntries(fs.map(f=>({file:f})));
+});
+tap($('#btnAdd'),pickFiles);
+
+/* ---------- online link ---------- */
+tap($('#btnLink'),()=>{openSheet('#shLink');setTimeout(()=>$('#urlIn').focus(),300)});
+async function addUrl(){
+  let u=$('#urlIn').value.trim();
+  if(!u)return;
+  if(!/^https?:\/\//i.test(u))u='https://'+u;
+  let name;try{const x=new URL(u);name=decodeURIComponent(x.pathname.split('/').filter(Boolean).pop()||x.hostname);name=stripExt(name)}catch(e){toast('لینک معتبر نیست');return}
+  const rec={type:'url',name,url:u};
+  rec.id=await DB.add(rec);songs.push(rec);
+  $('#urlIn').value='';closeSheets();render();
+  if(cur>=0)history.push(cur);
+  playIndex(songs.length-1);
+}
+tap($('#urlGo'),addUrl);
+$('#urlIn').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addUrl()}});
+
+/* ---------- dislike / delete ---------- */
+function askDelete(s){
+  pendingDel=s;
+  $('#delTitle').textContent=s.name;
+  if(s.type==='url'){
+    $('#delText').textContent='این لینک از لیست پخش حذف شود؟';
+    $('#delPhone').hidden=true;$('#delList').textContent='حذف از لیست';
+  }else{
+    $('#delText').textContent='این آهنگ حذف شود؟ می‌توانید فقط از لیست بردارید یا فایل را از حافظه گوشی هم پاک کنید. حذف از حافظه قابل بازگشت نیست.';
+    $('#delPhone').hidden=false;$('#delList').textContent='فقط از لیست حذف شود';
+  }
+  openSheet('#shDel');
+}
+async function removeFromPhone(s){
+  const h=s.handle;
+  if(!h||!h.remove)return 'none';
+  try{
+    let p=await h.queryPermission({mode:'readwrite'});
+    if(p!=='granted')p=await h.requestPermission({mode:'readwrite'});
+    if(p!=='granted')return 'denied';
+    await h.remove();return 'ok';
+  }catch(e){return 'fail'}
+}
+async function doDelete(fromPhone){
+  const s=pendingDel;if(!s)return;
+  closeSheets();
+  let res='';
+  if(fromPhone)res=await removeFromPhone(s);
+  const idx=songs.findIndex(x=>x.id===s.id);
+  const wasCur=idx===cur,wasPlaying=!au.paused;
+  try{await DB.del(s.id)}catch(e){}
+  songs.splice(idx,1);
+  resetQueues();
+  if(idx<cur)cur--;
+  if(wasCur){
+    A.pause();B.pause();
+    if(songs.length){cur=Math.min(idx,songs.length-1);if(shuffleOn)cur=Math.floor(Math.random()*songs.length);if(wasPlaying){playIndex(cur)}else{cur=-1;updateNow();render();paintSeek(0,NaN)}}
+    else{cur=-1;updateNow();paintSeek(0,NaN);render()}
+  }else render();
+  if(!fromPhone)toast('از لیست حذف شد');
+  else if(res==='ok')toast('از لیست و حافظه گوشی حذف شد');
+  else if(res==='denied')toast('اجازه حذف داده نشد؛ فقط از لیست حذف شد');
+  else toast('مرورگر اجازه حذف فایل از گوشی را نداد؛ فقط از لیست حذف شد');
+  pendingDel=null;
+}
+tap($('#delPhone'),()=>doDelete(true));
+tap($('#delList'),()=>doDelete(false));
+
+/* ---------- start ---------- */
+(async()=>{
+  buildEQUI();setShuffleUI();
+  try{await DB.open();songs=(await DB.all()).sort((a,b)=>a.id-b.id)}catch(e){toast('ذخیره‌سازی در دسترس نیست')}
+  render();paintSeek(0,NaN);
+  if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+})();
+</script>
+</body>
+</html>
